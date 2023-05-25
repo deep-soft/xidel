@@ -1,4 +1,4 @@
-#2023-05-26 01:10
+#2023-05-26 01:30
 name: Release
 
 # Controls when the workflow will run
@@ -17,18 +17,18 @@ on:
         type: boolean
         required: true
         default: true
-#      if: ${{ inputs.build-ubuntu }}
-      build-ubuntu:
-        description: Build ubuntu
-        type: boolean
-        required: true
-        default: false
 #      if: ${{ inputs.build-windows }}
       build-windows:
         description: Build windows
         type: boolean
         required: true
         default: true
+#      if: ${{ inputs.build-ubuntu }}
+      build-ubuntu:
+        description: Build ubuntu
+        type: boolean
+        required: true
+        default: false
 #      if: ${{ inputs.build-macos }}
       build-macos:
         description: Build macos
@@ -45,6 +45,143 @@ env:
   TAG_REF:     "0000000"
 
 jobs:
+  build-windows:
+    if: ${{ inputs.build-windows }}
+    runs-on: windows-latest
+    steps:
+    - name: Checkout source code
+      uses: actions/checkout@v3
+
+    - name: Get ref, set build version
+      shell: bash
+      run: |
+        _ref_all_=$(git log -1 --format='%H')
+        # _ref_=$(echo ${_ref_all_::7})
+        _ref_org_=${{ env.TAG_REF }}
+        _ref_len_="${#_ref_org_}"
+        _ref_=$(echo ${_ref_all_::$_ref_len_})
+        echo "TAG_REF=$_ref_" >> $GITHUB_ENV
+        _build_=${{ env.TAG_BUILD }}.$_ref_
+        echo "TAG_BUILD=$_build_" >> $GITHUB_ENV
+
+    - name: Print ref, build version
+      shell: bash
+      run: |
+        echo "REF: ${{ env.TAG_REF }}
+        echo "BLD: ${{ env.TAG_BUILD }}
+        echo "${{ env.TAG_NAME }}-${{ env.TAG_BUILD }}" > _tag_name_.txt
+
+    - name: Install Lazarus
+      uses: gcarreno/setup-lazarus@v3.2.15
+      with:
+        lazarus-version: stable
+
+    - name: Install dependencies and setup
+      continue-on-error: true    
+      shell: bash    
+      run: |
+        set -x
+        . .github/download-dependencies.sh
+        . .github/setup-fpc-cfg.sh "D:/a/_temp/lazarus/fpc/3.2.2/bin/x86_64-win64/fpc.cfg" "D:/a/xidel/xidel/"
+
+    - name: Create lazarus-installed archive
+      continue-on-error: true
+      shell: bash
+      run: |
+        staging="lazarus-installed-${{ env.VERSION }}-${{ matrix.job.target }}"
+        touch "$staging.tar.xz"
+        #tar -cfJ "$staging.tar.xz" --exclude "$staging.tar.xz" .
+        #tar --exclude=*.tar*  -cv . | xz -9 > "$staging.tar.xz"
+        work_dir=$(pwd)
+        cd D:/a/_temp/lazarus
+        tar --exclude=*.tar*  -cv . | xz -9 > $work_dir/"$staging.tar.xz"
+        cd $work_dir
+        echo "ASSET_INSTALLED=$staging.tar.xz" >> $GITHUB_ENV
+
+    - name: Publish lazarus-installed archive
+      continue-on-error: false
+      uses: deep-soft/action-gh-release@v1
+      with:
+        draft: true
+        tag_name: installed
+        files: |
+          ${{ env.ASSET_INSTALLED }}
+
+    - run: cp D:/a/_temp/lazarus/fpc/3.2.2/bin/x86_64-win64/fpc.cfg.release D:/a/_temp/lazarus/fpc/3.2.2/bin/x86_64-win64/fpc.cfg
+
+    - run: lazbuild --add-package internettools/internettools.lpk
+
+    - run: bash ./manage.sh win64
+
+#    - name: Test Xidel 64
+#      run: bash ./tests/tests.sh
+
+    - name: 'Upload '
+      uses: actions/upload-artifact@v3
+      with:
+        name: xidel.win64
+        path: xidelpackage/*
+
+    - name: Create release archive
+      continue-on-error: true
+      shell: bash
+      run: |
+        name="xidel.win64"
+        path="xidelpackage/"
+        work_dir=$(pwd)
+        cd $path
+        staging="$work_dir/$name-${{ env.VERSION }}"
+        touch "$staging.tar.xz"
+        tar --exclude=*.tar*  -cv . | xz -9 > "$staging.tar.xz"
+        echo "ASSET_REL=$staging.tar.xz" >> $GITHUB_ENV
+
+    - name: Publish Release
+      continue-on-error: true
+      uses: deep-soft/action-gh-release@v1
+      with:
+        draft: true
+        tag_name: ${{ env.TAG_NAME }}
+        files: |
+            ${{ env.ASSET_REL }}
+
+    - run: find -name "*.o" -or -name "*.ppu" -delete
+      shell: bash
+
+    - run: cp D:/a/_temp/lazarus/fpc/3.2.2/bin/x86_64-win64/fpc.cfg.debug D:/a/_temp/lazarus/fpc/3.2.2/bin/x86_64-win64/fpc.cfg 
+
+    - run: bash ./manage.sh win64
+
+#    - name: Test Xidel 64
+#      run: bash ./tests/tests.sh
+
+    - name: 'Upload '
+      uses: actions/upload-artifact@v3
+      with:
+        name: xidel-debug.win64
+        path: xidelpackage/*
+
+    - name: Create release archive
+      continue-on-error: true
+      shell: bash
+      run: |
+        name="xidel-debug.win64"
+        path="xidelpackage/"
+        work_dir=$(pwd)
+        cd $path
+        staging="$work_dir/$name-${{ env.VERSION }}"
+        touch "$staging.tar.xz"
+        tar --exclude=*.tar*  -cv . | xz -9 > "$staging.tar.xz"
+        echo "ASSET_REL=$staging.tar.xz" >> $GITHUB_ENV
+
+    - name: Publish Release
+      continue-on-error: true
+      uses: deep-soft/action-gh-release@v1
+      with:
+        draft: true
+        tag_name: ${{ env.TAG_NAME }}
+        files: |
+            ${{ env.ASSET_REL }}
+
   build-ubuntu:
     if: ${{ inputs.build-ubuntu }}
     runs-on: ubuntu-20.04
@@ -506,140 +643,6 @@ jobs:
       shell: bash
       run: |
         name="xidel-debug.openssl.win32"
-        path="xidelpackage/"
-        work_dir=$(pwd)
-        cd $path
-        staging="$work_dir/$name-${{ env.VERSION }}"
-        touch "$staging.tar.xz"
-        tar --exclude=*.tar*  -cv . | xz -9 > "$staging.tar.xz"
-        echo "ASSET_REL=$staging.tar.xz" >> $GITHUB_ENV
-
-    - name: Publish Release
-      continue-on-error: true
-      uses: deep-soft/action-gh-release@v1
-      with:
-        draft: true
-        tag_name: ${{ env.TAG_NAME }}
-        files: |
-            ${{ env.ASSET_REL }}
-
-  build-windows:
-    if: ${{ inputs.build-windows }}
-    runs-on: windows-latest
-    steps:
-    - name: Checkout source code
-      uses: actions/checkout@v3
-
-    - name: Get ref, set build version
-      shell: bash
-      run: |
-        _ref_all_=$(git log -1 --format='%H')
-        # _ref_=$(echo ${_ref_all_::7})
-        _ref_org_=${{ env.TAG_REF }}
-        _ref_len_="${#_ref_org_}"
-        _ref_=$(echo ${_ref_all_::$_ref_len_})
-        echo "TAG_REF=$_ref_" >> $GITHUB_ENV
-        _build_=${{ env.TAG_BUILD }}.$_ref_
-        echo "TAG_BUILD=$_build_" >> $GITHUB_ENV
-
-    - name: Print ref, build version
-      shell: bash
-      run: |
-        echo "REF: ${{ env.TAG_REF }}
-        echo "BLD: ${{ env.TAG_BUILD }}
-        echo "${{ env.TAG_NAME }}-${{ env.TAG_BUILD }}" > _tag_name_.txt
-
-    - name: Install Lazarus
-      uses: gcarreno/setup-lazarus@v3.2.15
-      with:
-        lazarus-version: stable
-
-    - name: Install dependencies and setup
-      continue-on-error: true    
-      shell: bash    
-      run: |
-        set -x
-        . .github/download-dependencies.sh
-        . .github/setup-fpc-cfg.sh "D:/a/_temp/lazarus/fpc/3.2.2/bin/x86_64-win64/fpc.cfg" "D:/a/xidel/xidel/"
-
-    - name: Create lazarus-installed archive
-      continue-on-error: true
-      shell: bash
-      run: |
-        staging="lazarus-installed-${{ env.VERSION }}-${{ matrix.job.target }}"
-        touch "$staging.tar.xz"
-        #tar -cfJ "$staging.tar.xz" --exclude "$staging.tar.xz" .
-        #tar --exclude=*.tar*  -cv . | xz -9 > "$staging.tar.xz"
-        tar --exclude=*.tar*  -cv D:/a/_temp/lazarus | xz -9 > "$staging.tar.xz"
-        echo "ASSET_INSTALLED=$staging.tar.xz" >> $GITHUB_ENV
-
-    - name: Publish lazarus-installed archive
-      continue-on-error: false
-      uses: deep-soft/action-gh-release@v1
-      with:
-        draft: true
-        tag_name: installed
-        files: |
-          ${{ env.ASSET_INSTALLED }}
-
-    - run: cp D:/a/_temp/lazarus/fpc/3.2.2/bin/x86_64-win64/fpc.cfg.release D:/a/_temp/lazarus/fpc/3.2.2/bin/x86_64-win64/fpc.cfg
-
-    - run: lazbuild --add-package internettools/internettools.lpk
-
-    - run: bash ./manage.sh win64
-
-#    - name: Test Xidel 64
-#      run: bash ./tests/tests.sh
-
-    - name: 'Upload '
-      uses: actions/upload-artifact@v3
-      with:
-        name: xidel.win64
-        path: xidelpackage/*
-
-    - name: Create release archive
-      continue-on-error: true
-      shell: bash
-      run: |
-        name="xidel.win64"
-        path="xidelpackage/"
-        work_dir=$(pwd)
-        cd $path
-        staging="$work_dir/$name-${{ env.VERSION }}"
-        touch "$staging.tar.xz"
-        tar --exclude=*.tar*  -cv . | xz -9 > "$staging.tar.xz"
-        echo "ASSET_REL=$staging.tar.xz" >> $GITHUB_ENV
-
-    - name: Publish Release
-      continue-on-error: true
-      uses: deep-soft/action-gh-release@v1
-      with:
-        draft: true
-        tag_name: ${{ env.TAG_NAME }}
-        files: |
-            ${{ env.ASSET_REL }}
-
-    - run: find -name "*.o" -or -name "*.ppu" -delete
-      shell: bash
-
-    - run: cp D:/a/_temp/lazarus/fpc/3.2.2/bin/x86_64-win64/fpc.cfg.debug D:/a/_temp/lazarus/fpc/3.2.2/bin/x86_64-win64/fpc.cfg 
-
-    - run: bash ./manage.sh win64
-
-#    - name: Test Xidel 64
-#      run: bash ./tests/tests.sh
-
-    - name: 'Upload '
-      uses: actions/upload-artifact@v3
-      with:
-        name: xidel-debug.win64
-        path: xidelpackage/*
-
-    - name: Create release archive
-      continue-on-error: true
-      shell: bash
-      run: |
-        name="xidel-debug.win64"
         path="xidelpackage/"
         work_dir=$(pwd)
         cd $path
