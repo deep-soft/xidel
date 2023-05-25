@@ -51,10 +51,10 @@ jobs:
         lazarus-version: stable
 
     - name: Download dependencies and setup Lazarus
-    - run: .github/download-dependencies.sh && .github/setup-fpc-cfg.sh 
+      run: .github/download-dependencies.sh && .github/setup-fpc-cfg.sh 
 
     - name: Lazarus Build
-    - run: lazbuild --add-package internettools/internettools.lpk
+      run: lazbuild --add-package internettools/internettools.lpk
 
     - run: ./manage.sh linux64
 
@@ -712,4 +712,3 @@ jobs:
         tag_name: ${{ env.TAG_NAME }}
         files: |
             ${{ env.ASSET_REL }}
-
