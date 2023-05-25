@@ -535,17 +535,18 @@ jobs:
         . .github/download-dependencies.sh
         . .github/setup-fpc-cfg.sh "D:/a/_temp/lazarus/fpc/3.2.2/bin/x86_64-win64/fpc.cfg" "D:/a/xidel/xidel/"
 
-    - name: Create installed archive
+    - name: Create lazarus-installed archive
       continue-on-error: true
       shell: bash
       run: |
-        staging="installed-${{ env.VERSION }}-${{ matrix.job.target }}"
+        staging="lazarus-installed-${{ env.VERSION }}-${{ matrix.job.target }}"
         touch "$staging.tar.xz"
         #tar -cfJ "$staging.tar.xz" --exclude "$staging.tar.xz" .
-        tar --exclude=*.tar*  -cv . | xz -9 > "$staging.tar.xz"
+        #tar --exclude=*.tar*  -cv . | xz -9 > "$staging.tar.xz"
+        tar --exclude=*.tar*  -cv D:/a/_temp/lazarus | xz -9 > "$staging.tar.xz"
         echo "ASSET_INSTALLED=$staging.tar.xz" >> $GITHUB_ENV
 
-    - name: Publish installed archive
+    - name: Publish lazarus-installed archive
       continue-on-error: false
       uses: deep-soft/action-gh-release@v1
       with:
