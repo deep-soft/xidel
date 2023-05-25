@@ -1,4 +1,4 @@
-#2023-05-25 17:00
+#2023-05-26 01:10
 name: Release
 
 # Controls when the workflow will run
@@ -11,6 +11,31 @@ on:
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
+    inputs:
+      manual:
+        description: Manual run (bypass default conditions)
+        type: boolean
+        required: true
+        default: true
+#      if: ${{ inputs.build-ubuntu }}
+      build-ubuntu:
+        description: Build ubuntu
+        type: boolean
+        required: true
+        default: false
+#      if: ${{ inputs.build-windows }}
+      build-windows:
+        description: Build ubuntu
+        type: boolean
+        required: true
+        default: true
+#      if: ${{ inputs.build-macos }}
+      build-macos:
+        description: Build ubuntu
+        type: boolean
+        required: true
+        default: false
+
 
 env:
   TAG_VERSION: "xidel-v0.9.9"
@@ -21,6 +46,7 @@ env:
 
 jobs:
   build-ubuntu:
+    if: ${{ inputs.build-ubuntu }}
     runs-on: ubuntu-20.04
     steps:
     - name: Checkout source code
@@ -498,6 +524,7 @@ jobs:
             ${{ env.ASSET_REL }}
 
   build-windows:
+    if: ${{ inputs.build-windows }}
     runs-on: windows-latest
     steps:
     - name: Checkout source code
@@ -631,6 +658,7 @@ jobs:
             ${{ env.ASSET_REL }}
 
   build-macos:
+    if: ${{ inputs.build-macos }}
     runs-on: macos-latest
     steps:
     - name: Checkout source code
