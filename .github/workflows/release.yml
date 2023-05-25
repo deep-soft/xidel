@@ -84,28 +84,28 @@ jobs:
         . .github/download-dependencies.sh
         . .github/setup-fpc-cfg.sh "D:/a/_temp/installers/lazarus/fpc/3.2.2/bin/x86_64-win64/fpc.cfg" "D:/a/xidel/xidel/"
 
-    - name: Create lazarus-installed archive
-      continue-on-error: true
-      shell: bash
-      run: |
-        staging="lazarus-installed-${{ env.VERSION }}-${{ matrix.job.target }}"
-        touch "$staging.tar.xz"
-        #tar -cfJ "$staging.tar.xz" --exclude "$staging.tar.xz" .
-        #tar --exclude=*.tar*  -cv . | xz -9 > "$staging.tar.xz"
-        work_dir=$(pwd)
-        cd D:/a/_temp/installers/lazarus
-        tar --exclude=*.tar*  -cv . | xz -9 > $work_dir/"$staging.tar.xz"
-        cd $work_dir
-        echo "ASSET_INSTALLED=$staging.tar.xz" >> $GITHUB_ENV
-
-    - name: Publish lazarus-installed archive
-      continue-on-error: false
-      uses: deep-soft/action-gh-release@v1
-      with:
-        draft: true
-        tag_name: installed
-        files: |
-          ${{ env.ASSET_INSTALLED }}
+#    - name: Create lazarus-installed archive
+#      continue-on-error: true
+#      shell: bash
+#      run: |
+#        staging="lazarus-installed-${{ env.VERSION }}-${{ matrix.job.target }}"
+#        touch "$staging.tar.xz"
+#        #tar -cfJ "$staging.tar.xz" --exclude "$staging.tar.xz" .
+#        #tar --exclude=*.tar*  -cv . | xz -9 > "$staging.tar.xz"
+#        work_dir=$(pwd)
+#        cd D:/a/_temp/installers/lazarus
+#        tar --exclude=*.tar*  -cv . | xz -9 > $work_dir/"$staging.tar.xz"
+#        cd $work_dir
+#        echo "ASSET_INSTALLED=$staging.tar.xz" >> $GITHUB_ENV
+#
+#    - name: Publish lazarus-installed archive
+#      continue-on-error: false
+#      uses: deep-soft/action-gh-release@v1
+#      with:
+#        draft: true
+#        tag_name: installed
+#        files: |
+#          ${{ env.ASSET_INSTALLED }}
 
     - run: cp D:/a/_temp/installers/lazarus/fpc/3.2.2/bin/x86_64-win64/fpc.cfg.release D:/a/_temp/installers/lazarus/fpc/3.2.2/bin/x86_64-win64/fpc.cfg
 
