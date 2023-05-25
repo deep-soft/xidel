@@ -25,13 +25,13 @@ on:
         default: false
 #      if: ${{ inputs.build-windows }}
       build-windows:
-        description: Build ubuntu
+        description: Build windows
         type: boolean
         required: true
         default: true
 #      if: ${{ inputs.build-macos }}
       build-macos:
-        description: Build ubuntu
+        description: Build macos
         type: boolean
         required: true
         default: false
