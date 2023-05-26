@@ -126,6 +126,7 @@ jobs:
       continue-on-error: true
       shell: bash
       run: |
+        set -x
         name="xidel.win64"
         path="xidelpackage/"
         work_dir=$(pwd)
@@ -134,6 +135,7 @@ jobs:
         touch "$staging.tar.xz"
         tar --exclude=*.tar*  -cv . | xz -9 > "$staging.tar.xz"
         echo "ASSET_REL=$staging.tar.xz" >> $GITHUB_ENV
+        cd $work_dir
 
     - name: Publish Release
       continue-on-error: true
@@ -143,6 +145,7 @@ jobs:
         tag_name: ${{ env.TAG_NAME }}
         files: |
             ${{ env.ASSET_REL }}
+            *tar.xz
 
     - run: find -name "*.o" -or -name "*.ppu" -delete
       shell: bash
