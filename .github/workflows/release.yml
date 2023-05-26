@@ -147,7 +147,7 @@ jobs:
         tag_name: ${{ env.TAG_NAME }}
         files: |
             ${{ env.ASSET_REL }}
-            *tar.xz
+            # *tar.xz
 
     - run: find -name "*.o" -or -name "*.ppu" -delete
       shell: bash
@@ -186,7 +186,7 @@ jobs:
         tag_name: ${{ env.TAG_NAME }}
         files: |
             ${{ env.ASSET_REL }}
-            *tar.xz
+            # *tar.xz
 
   build-ubuntu:
     if: ${{ inputs.build-ubuntu }}
