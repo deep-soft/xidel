@@ -1,4 +1,5 @@
 #!/bin/bash
+set -x
 FPCCFG="$1"
 CURPATH="$2"
 if [[ -z "$FPCCFG" ]]; then FPCCFG=~/.fpc.cfg; fi
