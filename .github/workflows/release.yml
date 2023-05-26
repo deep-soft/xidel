@@ -81,8 +81,10 @@ jobs:
       shell: bash    
       run: |
         set -x
+        lazarus_folder=D:/a/_temp/installers/lazarus
+        echo "lazarus_folder=$lazarus_folder" >>GITHUB_ENV
         . .github/download-dependencies.sh
-        . .github/setup-fpc-cfg.sh "D:/a/_temp/installers/lazarus/fpc/3.2.2/bin/x86_64-win64/fpc.cfg" "D:/a/xidel/xidel/"
+        . .github/setup-fpc-cfg.sh $lazarus_folder"/fpc/3.2.2/bin/x86_64-win64/fpc.cfg" "D:/a/xidel/xidel/"
 
 #    - name: Create lazarus-installed archive
 #      continue-on-error: true
@@ -93,8 +95,8 @@ jobs:
 #        #tar -cfJ "$staging.tar.xz" --exclude "$staging.tar.xz" .
 #        #tar --exclude=*.tar*  -cv . | xz -9 > "$staging.tar.xz"
 #        work_dir=$(pwd)
-#        cd D:/a/_temp/installers/lazarus
-#        tar --exclude=*.tar*  -cv . | xz -9 > $work_dir/"$staging.tar.xz"
+#        cd ${{ env.lazarus_folder }}
+#        tar --exclude=*.tar*  -cv . | xz -9 > "$work_dir/$staging.tar.xz"
 #        cd $work_dir
 #        echo "ASSET_INSTALLED=$staging.tar.xz" >> $GITHUB_ENV
 #
@@ -107,7 +109,7 @@ jobs:
 #        files: |
 #          ${{ env.ASSET_INSTALLED }}
 
-    - run: cp D:/a/_temp/installers/lazarus/fpc/3.2.2/bin/x86_64-win64/fpc.cfg.release D:/a/_temp/installers/lazarus/fpc/3.2.2/bin/x86_64-win64/fpc.cfg
+    - run: cp ${{ env.lazarus_folder }}/fpc/3.2.2/bin/x86_64-win64/fpc.cfg.release ${{ env.lazarus_folder }}/fpc/3.2.2/bin/x86_64-win64/fpc.cfg
 
     - run: lazbuild --add-package internettools/internettools.lpk
 
@@ -131,9 +133,9 @@ jobs:
         path="xidelpackage/"
         work_dir=$(pwd)
         cd $path
-        staging="$work_dir/$name-${{ env.VERSION }}"
+        staging="$name-${{ env.VERSION }}"
         touch "$staging.tar.xz"
-        tar --exclude=*.tar*  -cv . | xz -9 > "$staging.tar.xz"
+        tar --exclude=*.tar*  -cv . | xz -9 > "$work_dir/$staging.tar.xz"
         echo "ASSET_REL=$staging.tar.xz" >> $GITHUB_ENV
         cd $work_dir
 
@@ -150,7 +152,7 @@ jobs:
     - run: find -name "*.o" -or -name "*.ppu" -delete
       shell: bash
 
-    - run: cp D:/a/_temp/installers/lazarus/fpc/3.2.2/bin/x86_64-win64/fpc.cfg.debug D:/a/_temp/installers/lazarus/fpc/3.2.2/bin/x86_64-win64/fpc.cfg 
+    - run: cp ${{ env.lazarus_folder }}/fpc/3.2.2/bin/x86_64-win64/fpc.cfg.debug ${{ env.lazarus_folder }}/fpc/3.2.2/bin/x86_64-win64/fpc.cfg 
 
     - run: bash ./manage.sh win64
 
@@ -171,9 +173,9 @@ jobs:
         path="xidelpackage/"
         work_dir=$(pwd)
         cd $path
-        staging="$work_dir/$name-${{ env.VERSION }}"
+        staging="$name-${{ env.VERSION }}"
         touch "$staging.tar.xz"
-        tar --exclude=*.tar*  -cv . | xz -9 > "$staging.tar.xz"
+        tar --exclude=*.tar*  -cv . | xz -9 > "$work_dir/$staging.tar.xz"
         echo "ASSET_REL=$staging.tar.xz" >> $GITHUB_ENV
 
     - name: Publish Release
@@ -184,6 +186,7 @@ jobs:
         tag_name: ${{ env.TAG_NAME }}
         files: |
             ${{ env.ASSET_REL }}
+            *tar.xz
 
   build-ubuntu:
     if: ${{ inputs.build-ubuntu }}
