@@ -1,4 +1,4 @@
-#2023-05-26 02:00
+#2023-05-26 03:00
 name: Release
 
 # Controls when the workflow will run
@@ -82,7 +82,7 @@ jobs:
       run: |
         set -x
         lazarus_folder=D:/a/_temp/installers/lazarus
-        echo "lazarus_folder=$lazarus_folder" >>GITHUB_ENV
+        echo "lazarus_folder=$lazarus_folder" >> $GITHUB_ENV
         . .github/download-dependencies.sh
         . .github/setup-fpc-cfg.sh $lazarus_folder"/fpc/3.2.2/bin/x86_64-win64/fpc.cfg" "D:/a/xidel/xidel/"
 
@@ -220,7 +220,10 @@ jobs:
         lazarus-version: stable
 
     - name: Download dependencies and setup Lazarus
-      run: .github/download-dependencies.sh && .github/setup-fpc-cfg.sh 
+      shell: bash
+      run: |
+       .github/download-dependencies.sh 
+       .github/setup-fpc-cfg.sh 
 
     - name: Lazarus Build
       run: lazbuild --add-package internettools/internettools.lpk
