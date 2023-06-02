@@ -1,4 +1,4 @@
-#2023-05-26 03:00
+#2023-06-02 07:45
 name: Release
 
 # Controls when the workflow will run
@@ -139,6 +139,21 @@ jobs:
         echo "ASSET_REL=$staging.tar.xz" >> $GITHUB_ENV
         cd $work_dir
 
+    - name: Create Archive Release
+      uses: deep-soft/zip-release@v1
+      with:
+        type: 'zip'
+        filename: 'xidel.win64.zip'
+        directory: '.'
+        path: 'xidelpackage/'
+        exclusions: '*.git* /*node_modules/* .editorconfig'
+        
+    - name: print env value
+      shell: bash
+      run: |
+        echo "env.ZIP_RELEASE_ARCHIVE=${{ env.ZIP_RELEASE_ARCHIVE }}"
+        cp xidel.win64.zip xidel.win64-release.zip
+
     - name: Publish Release
       continue-on-error: true
       uses: deep-soft/action-gh-release@v1
@@ -147,6 +162,8 @@ jobs:
         tag_name: ${{ env.TAG_NAME }}
         files: |
             ${{ env.ASSET_REL }}
+            ${{ env.ZIP_RELEASE_ARCHIVE }}
+            xidel.win64-release.zip
             # *tar.xz
 
     - run: find -name "*.o" -or -name "*.ppu" -delete
