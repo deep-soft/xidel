@@ -143,16 +143,16 @@ jobs:
       uses: deep-soft/zip-release@v2
       with:
         type: 'zip'
-        filename: 'xidel.win64.zip'
+        filename: '${{ env.TAG_NAME }}-${{ env.VERSION }}'
         directory: '.'
         path: 'xidelpackage/'
         exclusions: '*.git* /*node_modules/* .editorconfig'
+        # archive name is ${{ env.ZIP_RELEASE_ARCHIVE }}
         
     - name: print env value
       shell: bash
       run: |
         echo "env.ZIP_RELEASE_ARCHIVE=${{ env.ZIP_RELEASE_ARCHIVE }}"
-        cp xidel.win64.zip xidel.win64-release.zip
 
     - name: Publish Release
       continue-on-error: true
@@ -163,7 +163,6 @@ jobs:
         files: |
             ${{ env.ASSET_REL }}
             ${{ env.ZIP_RELEASE_ARCHIVE }}
-            xidel.win64-release.zip
             # *tar.xz
 
     - run: find -name "*.o" -or -name "*.ppu" -delete
