@@ -140,7 +140,7 @@ jobs:
         cd $work_dir
 
     - name: Create Archive Release
-      uses: deep-soft/zip-release@v1
+      uses: deep-soft/zip-release@v2
       with:
         type: 'zip'
         filename: 'xidel.win64.zip'
