@@ -143,7 +143,7 @@ jobs:
       uses: deep-soft/zip-release@v2
       with:
         type: 'zip'
-        filename: '${{ env.TAG_NAME }}-${{ env.VERSION }}'
+        filename: '${{ env.TAG_NAME }}-${{ env.VERSION }}.zip'
         directory: '.'
         path: 'xidelpackage/'
         exclusions: '*.git* /*node_modules/* .editorconfig'
@@ -163,7 +163,6 @@ jobs:
         files: |
             ${{ env.ASSET_REL }}
             ${{ env.ZIP_RELEASE_ARCHIVE }}
-            # *tar.xz
 
     - run: find -name "*.o" -or -name "*.ppu" -delete
       shell: bash
@@ -202,7 +201,6 @@ jobs:
         tag_name: ${{ env.TAG_NAME }}
         files: |
             ${{ env.ASSET_REL }}
-            # *tar.xz
 
   build-ubuntu:
     if: ${{ inputs.build-ubuntu }}
