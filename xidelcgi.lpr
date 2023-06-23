@@ -3,8 +3,9 @@ program xidelcgi;
 {$mode objfpc}{$H+}
 
 uses
-  xidelbase, simplehtmltreeparser,
-  rcmdlinecgi, {utf8tools, }sysutils, strutils, math, bbutils, extendedhtmlparser, xquery.internals.common, xidelcrt
+  cthreads, xidelbase, simplehtmltreeparser, classes,
+  rcmdlinecgi, {utf8tools, }sysutils, strutils, math, bbutils, extendedhtmlparser, xquery.internals.common, xidelcrt,
+  baseunix
   { you can add units after this };
 
 const ExampleHTML: string = '<html><body>'#13#10+
@@ -76,12 +77,14 @@ begin
     ekXPath2: exit('xpath2');
     ekXPath3_0: exit('xpath3');
     ekXPath3_1: exit('xpath3_1');
+    ekXPath4_0: exit('xpath4_0');
     ekPatternHTML: exit('html-pattern');
     ekPatternXML: exit('xml-pattern');
     ekCSS: exit('css');
     ekXQuery1: exit('xquery1');
     ekXQuery3_0: exit('xquery3');
     ekXQuery3_1: exit('xquery3_1');
+    ekXQuery4_0: exit('xquery4_0');
     else exit('auto');
   end;
 end;
@@ -126,6 +129,23 @@ begin
   else writeEscaped;
 end;
 
+type TTimeoutThread = class(TThread)
+  procedure Execute; override;
+end;
+procedure TTimeoutThread.Execute;
+begin
+  self.sleep(10*1000);
+  w('TIMEOUT');
+  flush(xidelOutputFile);
+  Halt();
+
+end;
+
+procedure startTimeoutThread;
+begin
+  TTimeoutThread.Create(false);
+end;
+
 type
 
 { TCommandLineReaderBreaker }
@@ -143,10 +163,10 @@ procedure printPre(extractionKind: TExtractionKind);
     if (t = mycmdline.readString('extract-kind')) and (mycmdline.readString('extract') <> '') then
       exit(mycmdline.readString('extract'));
     case t of
-    'xpath', 'xpath2', 'xpath3', 'xpath3.0', 'xpath3.1': exit(ExampleXPath);
+    'xpath', 'xpath2', 'xpath3', 'xpath3.0', 'xpath3.1', 'xpath4.0': exit(ExampleXPath);
     'xquery1': exit(ExampleXQuery1);
     'xquery', 'xquery3', 'xquery3.0': exit(ExampleXQuery3_0);
-    'xquery3.1': exit(ExampleXQuery3_1);
+    'xquery3.1', 'xquery4.0': exit(ExampleXQuery3_1);
     'css': exit(ExampleCSS);
     {'template', 'auto':} else exit(ExampleTemplate);
     end;
@@ -192,6 +212,8 @@ begin
 
   if (mycmdline.readFlag('case-sensitive')) then
     xqueryDefaultCollation:='http://www.w3.org/2005/xpath-functions/collation/codepoint';
+
+  startTimeoutThread;
 
   if mycmdline.readFlag('raw') then begin
     case mycmdLine.readString('output-format') of
@@ -249,6 +271,7 @@ begin
 
   w('</span>');
   w('<br>Old languages: ' + kind('xpath2', 'XPath 2.0')+kind('xpath3.0', 'XPath 3.0')+kind('xquery1', 'XQuery 1.0')+kind('xquery3.0', 'XQuery 3.0')+'<br>');
+  w('<br>New languages: ' + kind('xpath4.0', 'XPath 4.0')+kind('xquery4.0', 'XQuery 4.0')+'<br>');
   w('</form>');
 
  { w('<script src="../codemirror/codemirror.js"></script>');
@@ -396,6 +419,7 @@ begin
   for i := 0 to high(temp) do TCommandLineReaderBreaker(mycmdline).setString(strSplit(temp[i], '=')[0],strSplit(temp[i], '=')[1]);
 end;
 
+
 procedure TCommandLineReaderBreaker.setString(const n, v: string);
 begin
   findProperty(n)^.strvalue:=v;
@@ -406,7 +430,60 @@ begin
   findProperty(n)^.flagvalue:=v;
 end;
 
+
+
+Function  FPC_SYSC_OPEN       (path : pChar; flags : cInt; Mode: TMode):cInt; external name 'FPC_SYSC_OPEN';
+Function  FPC_SYSC_ACCESS (pathname : pChar; aMode : cInt): cInt; external name 'FPC_SYSC_ACCESS';
+Function  FPC_SYSC_OPENDIR    (dirname : pChar): pDir;  external name 'FPC_SYSC_OPENDIR';
+Function  FPC_SYSC_MKDIR      (path : pChar; Mode: TMode):cInt;  external name 'FPC_SYSC_MKDIR';
+Function  FPC_SYSC_UNLINK     (path : pChar): cInt;  external name 'FPC_SYSC_UNLINK';
+Function  FPC_SYSC_RMDIR      (path : pChar): cInt; external name 'FPC_SYSC_RMDIR';
+Function  FPC_SYSC_RENAME     (old  : pChar; newpath: pChar): cInt;   external name 'FPC_SYSC_RENAME';
+Function  FPC_SYSC_FSTAT      (fd : cInt; var sb : stat): cInt; external name 'FPC_SYSC_FSTAT';
+Function  FPC_SYSC_STAT       (path: pChar; var buf : stat): cInt;  external name 'FPC_SYSC_STAT';
+
+function fpOpenOverride: integer;
 begin
+  fpseterrno(ESysEACCES);
+  result := -1;
+end;
+
+
+procedure lockdownFileAccess;
+  procedure patchExecutable(oldFunction, newFunction: pointer);
+  const PAGESIZE = 4096;
+  var page: pointer;
+    data: array[1..12]  of char = #$48#$b8#$77#$77#$77#$77#$77#$77#$77#$77#$ff#$e0 ; //mov rax, 7*; jmp rax
+     //#$48#$c7#$c0#$01#$00#$00#$00#$C3; mov 1, rax; ret
+  begin
+    move(newFunction, data[3], 8);
+    page := pointer(ptruint(oldFunction) and not (PAGESIZE-1));
+    Fpmprotect(page, PAGESIZE, PROT_WRITE or PROT_READ or PROT_EXEC );
+    Move(data[1], oldFunction^, sizeof(data));
+    Fpmprotect(page, PAGESIZE, PROT_EXEC or PROT_READ );
+  end;
+
+begin
+  patchExecutable(@FPC_SYSC_OPEN, @fpOpenOverride);   //this is the important one. all file reading/writing I know goes through it.
+  patchExecutable(@FPC_SYSC_ACCESS, @fpOpenOverride); //blocking this turns "permission denied" to "file not found"
+  //do not know if anything uses those functions:
+  patchExecutable(@FPC_SYSC_OPENDIR, @fpOpenOverride);
+  patchExecutable(@FPC_SYSC_MKDIR  , @fpOpenOverride);
+  patchExecutable(@FPC_SYSC_UNLINK , @fpOpenOverride);
+  patchExecutable(@FPC_SYSC_RMDIR  , @fpOpenOverride);
+  patchExecutable(@FPC_SYSC_RENAME , @fpOpenOverride);
+  patchExecutable(@FPC_SYSC_FSTAT  , @fpOpenOverride);
+  patchExecutable(@FPC_SYSC_STAT   , @fpOpenOverride);
+  patchExecutable(@FpExecv, @fpOpenOverride);
+  patchExecutable(@FpExecve, @fpOpenOverride);
+end;
+
+begin
+  lockdownFileAccess;
+
+  //writeln(output,'Content-Type: text/plain');
+  //writeln(output,'');
+  //flush(output);
   xidelbase.cgimode := true;
   xidelbase.allowInternetAccess := false;
   xidelcrt.allowFileAccess := false;
